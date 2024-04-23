@@ -4,7 +4,7 @@
 
 #include <cvode/cvode.h>               /* prototypes for CVODE fcts., consts. */
 #include <cvode/cvode_diag.h>          /* access to CVDiag interface */
-#include <sundials/sundials_types.h>   /* definition of type realtype */
+#include <sundials/sundials_types.h>   /* definition of type sunrealtype */
 
 #include <nvector/nvector_serial.h>
 #ifndef AMREX_USE_GPU
@@ -32,11 +32,11 @@
 using namespace amrex;
 
 /* Functions Called by the Solver */
-static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
+static int f(sunrealtype t, N_Vector u, N_Vector udot, void *user_data);
 
 static void PrintFinalStats(void *cvode_mem);
 
-static void PrintOutput(realtype t, realtype umax, long int nst);
+static void PrintOutput(sunrealtype t, sunrealtype umax, long int nst);
 
 /* Private function to check function return values */
 static int check_retval(void *flagvalue, const char *funcname, int opt);
@@ -77,7 +77,7 @@ int Nyx::integrate_state_vec_mfin
    long int& old_max_steps, long int& new_max_steps)
 {
 
-  realtype reltol, abstol;
+  sunrealtype reltol, abstol;
   int flag;
 
   reltol = sundials_reltol;  /* Set the tolerances */
@@ -95,8 +95,8 @@ int Nyx::integrate_state_vec_mfin
       N_Vector abstol_vec;
 
       void *cvode_mem;
-      realtype *dptr, *eptr, *rpar, *rparh, *abstol_ptr;
-      realtype t=0.0;
+      sunrealtype *dptr, *eptr, *rpar, *rparh, *abstol_ptr;
+      sunrealtype t=0.0;
 
       u = NULL;
       e_orig = NULL;
@@ -162,20 +162,20 @@ int Nyx::integrate_state_vec_mfin
                         }
                         else
                         {
-                          dptr=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                          dptr=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                           u = N_VMakeManaged_Cuda(neq,dptr, *amrex::sundials::The_Sundials_Context());  /* Allocate u vector */
-                          eptr= (realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                          eptr= (sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                           e_orig = N_VMakeManaged_Cuda(neq,eptr, *amrex::sundials::The_Sundials_Context());  /* Allocate u vector */
                           N_VSetKernelExecPolicy_Cuda(e_orig, &stream_exec_policy, &reduce_exec_policy);
                           N_VSetKernelExecPolicy_Cuda(u, &stream_exec_policy, &reduce_exec_policy);
 
-                          rparh = (realtype*) The_Arena()->alloc(4*neq*sizeof(realtype));
+                          rparh = (sunrealtype*) The_Arena()->alloc(4*neq*sizeof(sunrealtype));
                           Data = N_VMakeManaged_Cuda(4*neq,rparh, *amrex::sundials::The_Sundials_Context());  // Allocate u vector
                           N_VSetKernelExecPolicy_Cuda(Data, &stream_exec_policy, &reduce_exec_policy);
                           // shouldn't need to initialize
                           //N_VConst(0.0,Data);
 
-                          abstol_ptr = (realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                          abstol_ptr = (sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                           abstol_vec = N_VMakeManaged_Cuda(neq,abstol_ptr, *amrex::sundials::The_Sundials_Context());
                           N_VSetKernelExecPolicy_Cuda(abstol_vec, &stream_exec_policy, &reduce_exec_policy);
                           amrex::Gpu::streamSynchronize();
@@ -396,12 +396,12 @@ int Nyx::integrate_state_grownvec
 }
 
 #ifdef AMREX_USE_GPU
-static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
+static int f(sunrealtype t, N_Vector u, N_Vector udot, void *user_data)
 {
   Real* udot_ptr=N_VGetDeviceArrayPointer(udot);
   Real* u_ptr=N_VGetDeviceArrayPointer(u);
   int neq=N_VGetLength(udot);
-  realtype*  rpar=N_VGetDeviceArrayPointer(*(static_cast<N_Vector*>(user_data)));
+  sunrealtype*  rpar=N_VGetDeviceArrayPointer(*(static_cast<N_Vector*>(user_data)));
 
   auto atomic_rates = atomic_rates_glob;
   Real lh_species = Nyx::h_species;
@@ -415,13 +415,13 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 }
 
 #else
-static int f(realtype t, N_Vector u, N_Vector udot, void* user_data)
+static int f(sunrealtype t, N_Vector u, N_Vector udot, void* user_data)
 {
 
   Real* udot_ptr=N_VGetArrayPointer_Serial(udot);
   Real* u_ptr=N_VGetArrayPointer_Serial(u);
   int neq=N_VGetLength_Serial(udot);
-  realtype*  rpar=N_VGetArrayPointer_Serial(*(static_cast<N_Vector*>(user_data)));
+  sunrealtype*  rpar=N_VGetArrayPointer_Serial(*(static_cast<N_Vector*>(user_data)));
   auto atomic_rates = atomic_rates_glob;
   Real lh_species = Nyx::h_species;
   #pragma omp parallel for
@@ -434,7 +434,7 @@ static int f(realtype t, N_Vector u, N_Vector udot, void* user_data)
 }
 #endif
 
-static void PrintOutput(realtype t, realtype umax, long int nst)
+static void PrintOutput(sunrealtype t, sunrealtype umax, long int nst)
 {
 #if defined(SUNDIALS_EXTENDED_PRECISION)
   printf("At t = %4.2Lf   max.norm(u) =%14.16Le   nst = %4ld\n", t, umax, nst);

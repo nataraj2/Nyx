@@ -4,7 +4,7 @@
 
 #include <cvode/cvode.h>               /* prototypes for CVODE fcts., consts. */
 #include <cvode/cvode_diag.h>          /* access to CVDiag interface */
-#include <sundials/sundials_types.h>   /* definition of type realtype */
+#include <sundials/sundials_types.h>   /* definition of type sunrealtype */
 #include <sundials/sundials_memory.h>
 #include <sundials/sundials_config.h>
 
@@ -38,7 +38,7 @@
 // using namespace amrex;
 
 /* Functions Called by the Solver */
-static int f(realtype t, N_Vector u, N_Vector udot, void *user_data);
+static int f(sunrealtype t, N_Vector u, N_Vector udot, void *user_data);
 
 static void PrintFinalStats(void *cvode_mem);
 static void GetFinalStats(void *cvode_mem, N_Vector abstol_achieve, long int& nst, long int& netf, long int& nfe,
@@ -208,7 +208,7 @@ int Nyx::integrate_state_struct_mfin
     Real gamma_minus_1 = gamma - 1.0;
     ode_eos_setup(f_rhs_data, gamma_minus_1, h_species);
 
-    realtype reltol, abstol;
+    sunrealtype reltol, abstol;
     int flag;
 
     reltol = sundials_reltol;  /* Set the tolerances */
@@ -234,9 +234,9 @@ int Nyx::integrate_state_struct_mfin
       N_Vector IR_vec;
 
       void *cvode_mem;
-      realtype *dptr, *eptr, *rpar, *rparh, *abstol_ptr, *abstol_achieve_ptr;
+      sunrealtype *dptr, *eptr, *rpar, *rparh, *abstol_ptr, *abstol_achieve_ptr;
       Real *T_vode, *ne_vode,*rho_vode,*rho_init_vode,*rho_src_vode,*rhoe_src_vode,*e_src_vode,*IR_vode;
-      realtype t=0.0;
+      sunrealtype t=0.0;
 
       u = NULL;
       e_orig = NULL;
@@ -288,34 +288,34 @@ int Nyx::integrate_state_struct_mfin
       {
         if(sundials_alloc_type==1)
           {
-                dptr=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                dptr=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 u = N_VMakeManaged_Cuda(neq,dptr, *amrex::sundials::The_Sundials_Context());  /* Allocate u vector */
-                eptr= (realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                eptr= (sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 e_orig = N_VMakeManaged_Cuda(neq,eptr, *amrex::sundials::The_Sundials_Context());  /* Allocate u vector */
                 N_VSetKernelExecPolicy_Cuda(e_orig, stream_exec_policy, reduce_exec_policy);
                 N_VSetKernelExecPolicy_Cuda(u, stream_exec_policy, reduce_exec_policy);
 
-                abstol_ptr = (realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                abstol_ptr = (sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 abstol_vec = N_VMakeManaged_Cuda(neq,abstol_ptr, *amrex::sundials::The_Sundials_Context());
                 N_VSetKernelExecPolicy_Cuda(abstol_vec, stream_exec_policy, reduce_exec_policy);
-                abstol_achieve_ptr = (realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                abstol_achieve_ptr = (sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 abstol_achieve_vec = N_VMakeManaged_Cuda(neq,abstol_achieve_ptr, *amrex::sundials::The_Sundials_Context());
                 N_VSetKernelExecPolicy_Cuda(abstol_achieve_vec, stream_exec_policy, reduce_exec_policy);
-                T_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                T_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 T_vec = N_VMakeManaged_Cuda(neq, T_vode, *amrex::sundials::The_Sundials_Context());
-                ne_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                ne_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 ne_vec = N_VMakeManaged_Cuda(neq, ne_vode, *amrex::sundials::The_Sundials_Context());
-                rho_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                rho_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 rho_vec = N_VMakeManaged_Cuda(neq, rho_vode, *amrex::sundials::The_Sundials_Context());
-                rho_init_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                rho_init_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 rho_init_vec = N_VMakeManaged_Cuda(neq, rho_init_vode, *amrex::sundials::The_Sundials_Context());
-                rho_src_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                rho_src_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 rho_src_vec = N_VMakeManaged_Cuda(neq, rho_src_vode, *amrex::sundials::The_Sundials_Context());
-                rhoe_src_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                rhoe_src_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 rhoe_src_vec = N_VMakeManaged_Cuda(neq, rhoe_src_vode, *amrex::sundials::The_Sundials_Context());
-                e_src_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                e_src_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 e_src_vec = N_VMakeManaged_Cuda(neq, e_src_vode, *amrex::sundials::The_Sundials_Context());
-                IR_vode=(realtype*) The_Arena()->alloc(neq*sizeof(realtype));
+                IR_vode=(sunrealtype*) The_Arena()->alloc(neq*sizeof(sunrealtype));
                 IR_vec = N_VMakeManaged_Cuda(neq, IR_vode, *amrex::sundials::The_Sundials_Context());
                 N_VSetKernelExecPolicy_Cuda(T_vec, stream_exec_policy, reduce_exec_policy);
                 N_VSetKernelExecPolicy_Cuda(ne_vec, stream_exec_policy, reduce_exec_policy);
@@ -709,7 +709,7 @@ int Nyx::integrate_state_struct_mfin
 }
 
 #ifdef AMREX_USE_GPU
-static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
+static int f(sunrealtype t, N_Vector u, N_Vector udot, void *user_data)
 {
   amrex::Gpu::streamSynchronize();
   BL_PROFILE("Nyx::reactions_f");
@@ -730,7 +730,7 @@ static int f(realtype t, N_Vector u, N_Vector udot, void *user_data)
 }
 
 #else
-static int f(realtype t, N_Vector u, N_Vector udot, void* user_data)
+static int f(sunrealtype t, N_Vector u, N_Vector udot, void* user_data)
 {
   BL_PROFILE("Nyx::reactions_f");
   Real* udot_ptr=N_VGetArrayPointer(udot);

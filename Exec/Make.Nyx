@@ -112,6 +112,10 @@ USE_ARKODE_LIBS ?= TRUE
 INCLUDE_LOCATIONS += $(SUNDIALS_ROOT)/include
 LIBRARY_LOCATIONS += $(SUNDIALS_LIB_DIR)
 
+ifneq (,$(wildcard $(SUNDIALS_LIB_DIR)/libsundials_core*))
+    LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_core
+endif
+
 ifeq ($(USE_CVODE_LIBS),TRUE)
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
 endif
