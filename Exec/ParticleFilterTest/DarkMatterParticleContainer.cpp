@@ -265,7 +265,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (ParIter pti(*this, lev); pti.isValid(); ++pti) {
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) {
 
         auto& particles = (this->ParticlesAt(lev,pti)).GetArrayOfStructs();
 
