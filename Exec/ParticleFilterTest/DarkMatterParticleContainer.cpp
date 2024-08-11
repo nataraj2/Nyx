@@ -97,35 +97,28 @@ struct ShellFilter
         if(m_radius_inner<=0 || m_radius_outer<=0)
             return false;
 	if(src.m_aos[i].id()>0) {
-            Real xlen = src.m_aos[i].rdata(0+1+3) - m_center[0];
-            Real ylen = src.m_aos[i].rdata(1+1+3) - m_center[1];
-            Real zlen = src.m_aos[i].rdata(2+1+3) - m_center[2];
-                        Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-			Real theta = atan(ylen/xlen);
-			Real phi = acos(zlen/mag);
-			Real r1=m_radius_inner;
-			Real x1=m_center[0] + r1*cos(theta)*sin(phi);
-			Real y1=m_center[1] + r1*sin(theta)*sin(phi);
-			Real z1=m_center[2] + r1*cos(phi);
-			Real r2=m_radius_inner;
-			Real x2=m_center[0] + r2*cos(theta)*sin(phi);
-			Real y2=m_center[1] + r2*sin(theta)*sin(phi);
-			Real z2=m_center[2] + r2*cos(phi);
-			Real idirf = floor(x1/m_phi[0]);
-			Real jdirf = floor(y1/m_phi[1]);
-			Real kdirf = floor(z1/m_phi[2]);
-			Real idirc = ceil(x2/m_phi[0]);
-			Real jdirc = ceil(y2/m_phi[1]);
-			Real kdirc = ceil(z2/m_phi[2]);
-        for(int idir=idirf;idir<=idirc;idir++)
-            for(int jdir=jdirf;jdir<=jdirc;jdir++)
-                for(int kdir=kdirf;kdir<=kdirc;kdir++)
+
+			Real xlen, ylen, zlen;
+            
+			Real lenx = m_phi[0]-m_plo[0];
+            Real leny = m_phi[1]-m_plo[1];
+            Real lenz = m_phi[2]-m_plo[2];
+            int maxind[3];
+            maxind[0] = floor((m_radius_outer+lenx*0.5)/lenx);
+            maxind[1] = floor((m_radius_outer+leny*0.5)/leny);
+            maxind[2] = floor((m_radius_outer+lenz*0.5)/lenz);
+
+            //printf("Value is %d\n", maxind);
+
+        for(int idir=-maxind[0];idir<=maxind[0];idir++)
+            for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
+                for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
                     {
                         xlen = src.m_aos[i].rdata(0+1+3)+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
                         ylen = src.m_aos[i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
                         zlen = src.m_aos[i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result=result? true : (mag>m_radius_inner && mag<m_radius_outer);
+                        result=result? true : (mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
 			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }
 	}
@@ -265,7 +258,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (ParIter pti(*this, lev); pti.isValid(); ++pti) {
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) {
 
         auto& particles = (this->ParticlesAt(lev,pti)).GetArrayOfStructs();
 
@@ -522,38 +515,29 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
 
     if (do_move == 1) 
          {
-           p2.rdata(0)=p.rdata(0);
-	   bool result=false;
-                        Real xlen = p.pos(0) - center[0];
-                        Real ylen = p.pos(1) - center[1];
-                        Real zlen = p.pos(2) - center[2];
-                        Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-			Real theta = atan(ylen/xlen);
-			Real phiangle = acos(zlen/mag);
-			Real r1=radius_inner;
-			Real x1=center[0] + r1*cos(theta)*sin(phiangle);
-			Real y1=center[1] + r1*sin(theta)*sin(phiangle);
-			Real z1=center[2] + r1*cos(phiangle);
-			Real r2=radius_inner;
-			Real x2=center[0] + r2*cos(theta)*sin(phiangle);
-			Real y2=center[1] + r2*sin(theta)*sin(phiangle);
-			Real z2=center[2] + r2*cos(phiangle);
-			Real idirf = floor(x1/phi[0]);
-			Real jdirf = floor(y1/phi[1]);
-			Real kdirf = floor(z1/phi[2]);
-			Real idirc = ceil(x2/phi[0]);
-			Real jdirc = ceil(y2/phi[1]);
-			Real kdirc = ceil(z2/phi[2]);
-        for(int idir=idirf;idir<=idirc;idir++)
-            for(int jdir=jdirf;jdir<=jdirc;jdir++)
-                for(int kdir=kdirf;kdir<=kdirc;kdir++)
+            p2.rdata(0)=p.rdata(0);
+	  	    bool result=false;
+            Real lenx = phi[0]-plo[0];
+			Real leny = phi[1]-plo[1];
+			Real lenz = phi[2]-plo[2];
+			int maxind[3]; 
+			maxind[0] = floor((radius_outer+lenx*0.5)/lenx);
+			maxind[1] = floor((radius_outer+leny*0.5)/leny);
+			maxind[2] = floor((radius_outer+lenz*0.5)/lenz);
+
+			Real xlen, ylen, zlen;
+			//printf("Value is %d\n", maxind);
+
+        for(int idir=-maxind[0];idir<=maxind[0];idir++)
+            for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
+                for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
                     {
                         xlen = p.pos(0)+(idir)*(phi[0]-plo[0]) - center[0];
                         ylen = p.pos(1)+(jdir)*(phi[1]-plo[1]) - center[1];
                         zlen = p.pos(2)+(kdir)*(phi[2]-plo[2]) - center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result=result? true : (mag>radius_inner && mag<radius_outer);
-			if((mag>radius_inner && mag<radius_outer)) {
+                        result=result? true : (mag>radius_inner && mag<radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
+			if((mag>radius_inner && mag<radius_outer and zlen > -1000000.0 and zlen < 1000000.0)) {
 			    int comp=0;
                             p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
 			    comp=1;
@@ -565,7 +549,7 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                     }
            for (int comp=0; comp < nc; ++comp) {
                p2.rdata(comp+1+3)=p.pos(comp);
-	       p2.rdata(comp+1+3+3) = p.pos(comp) + dt_a_cur_inv * p.rdata(comp+1);
+	       	   p2.rdata(comp+1+3+3) = p.pos(comp) + dt_a_cur_inv * p.rdata(comp+1);
                p2.rdata(comp+1)=p.rdata(comp+1);
                //              p2.pos(comp)=p.pos(comp);
                p2.id()=p.id();
