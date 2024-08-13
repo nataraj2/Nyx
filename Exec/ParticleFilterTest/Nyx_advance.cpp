@@ -280,8 +280,6 @@ Nyx::advance_hydro_plus_particles (Real time,
                 Print()<<radius_outer<<std::endl;
 				//exit(0);
                 }
-				radius_inner = 5000.0;
-				radius_outer = 5500.0;
                 Nyx::theActiveParticles()[i]->moveKickDrift(grav_vec_old, lev, time, dt, a_old, a_half, where_width, radius_inner, radius_outer);
             }
 
