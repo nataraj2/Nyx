@@ -96,7 +96,7 @@ struct ShellFilter
         int result=0;
         if(m_radius_inner<=0 || m_radius_outer<=0)
             return 0;
-        if(src.m_aos[i].id()>0) {
+        if(src.m_idcpu[i]>0) {
 
             Real xlen, ylen, zlen;
             
@@ -109,14 +109,13 @@ struct ShellFilter
             maxind[2] = floor((m_radius_outer+lenz*0.5)/lenz);
 
             //printf("Value is %d\n", maxind);
-
-        for(int idir=-maxind[0];idir<=maxind[0];idir++)
-            for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
-                for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
-                    {
-                        xlen = src.m_aos[i].rdata(0+1+3)+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
-                        ylen = src.m_aos[i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
-                        zlen = src.m_aos[i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+	    for(int idir=-maxind[0];idir<=maxind[0];idir++)
+	      for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
+		for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
+		  {
+		    xlen = src.m_rdata[0+1+3][i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+		    ylen = src.m_rdata[1+1+3][i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+		    zlen = src.m_rdata[2+1+3][i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
                         result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
                         //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
@@ -165,29 +164,28 @@ struct ShellStoreFilter
 	for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
 	  for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
 	    {
-	      xlen = src.m_aos[src_i].rdata(0+1+3)+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
-	      ylen = src.m_aos[src_i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
-	      zlen = src.m_aos[src_i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+	      xlen = src.m_rdata[0+1+3][src_i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+	      ylen = src.m_rdata[1+1+3][src_i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+	      zlen = src.m_rdata[2+1+3][src_i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
 	      Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
 
 	      if(int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0))
 		local_index++;
 
 	      if(local_index==index) {
-		dst.m_aos[dst_i].rdata(0)=src.m_aos[src_i].rdata(0);
+		dst.m_aos[dst_i].rdata(0)=src.m_rdata[0][src_i];
 		int comp=0;
-		dst.m_aos[dst_i].pos(comp) = src.m_aos[src_i].pos(comp)+(idir)*(m_phi[comp]-m_plo[comp]);
+		dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(idir)*(m_phi[comp]-m_plo[comp]);
 		comp=1;
-		dst.m_aos[dst_i].pos(comp) = src.m_aos[src_i].pos(comp)+(jdir)*(m_phi[comp]-m_plo[comp]);
+		dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(jdir)*(m_phi[comp]-m_plo[comp]);
 		comp=2;
-		dst.m_aos[dst_i].pos(comp) = src.m_aos[src_i].pos(comp)+(kdir)*(m_phi[comp]-m_plo[comp]);
+		dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(kdir)*(m_phi[comp]-m_plo[comp]);
 		for (int comp=0; comp < nc; ++comp) {
-		  dst.m_aos[dst_i].rdata(comp+1+3)=src.m_aos[src_i].pos(comp);
-		  dst.m_aos[dst_i].rdata(comp+1+3+3) = src.m_aos[src_i].pos(comp) + m_dt_a_cur_inv * src.m_aos[src_i].rdata(comp+1);
-		  dst.m_aos[dst_i].rdata(comp+1)=src.m_aos[src_i].rdata(comp+1);
+		  dst.m_aos[dst_i].rdata(comp+1+3)=src.pos(comp,src_i);
+		  dst.m_aos[dst_i].rdata(comp+1+3+3) = src.pos(comp,src_i) + m_dt_a_cur_inv * src.m_rdata[comp+1][src_i];
+		  dst.m_aos[dst_i].rdata(comp+1)=src.m_rdata[comp+1][src_i];
 			      //              p2.pos(comp)=p.pos(comp);
-		  dst.m_aos[dst_i].id()=src.m_aos[src_i].id();
-		  dst.m_aos[dst_i].cpu()=src.m_aos[src_i].cpu();
+		  dst.m_idcpu[dst_i]=src.m_idcpu[src_i];
 		}
 		return;
 	      }
@@ -216,11 +214,11 @@ template <typename DstTile, typename SrcTile, typename Index, typename N,
 Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
                                           Index src_start, Index dst_start, N n, Pred&& p, F&& f) noexcept
 {
-    auto np = src.numParticles();
+    long np = n;
     if (np == 0) { return 0; }
     Gpu::DeviceVector<Index> mask_vec(np);
     auto * mask=mask_vec.dataPtr();
-    const auto ptd = src.getConstParticleTileData();
+    const auto & ptd = src;
     AMREX_HOST_DEVICE_FOR_1D( np, i,
     {
       mask[i] = int(p(src,i));
@@ -241,7 +239,7 @@ Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
 
     auto const* p_offsets = offsets.dataPtr();
 
-    const auto src_data = src.getConstParticleTileData();
+    const auto & src_data = src;
           auto dst_data = dst.getParticleTileData();
     // f here should do the copy and transform parts (or maybe instead just do copy here, although we want the images specifically)
     AMREX_HOST_DEVICE_FOR_1D( np, i,
@@ -333,7 +331,8 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     ShellPC->resizeData();
     ParticleContainer<10,0>::ParticleInitData pdata = {{}, {}, {}, {}};
     ShellPC->InitNRandomPerCell(1,pdata);
-    //    ShellPC->resize(pc.TotalNumberOfParticles());
+    
+    //    ShellPC->resize(pc->TotalNumberOfParticles());
     auto geom_test=pc->Geom(lev);
     const GpuArray<Real,AMREX_SPACEDIM> phi=geom_test.ProbHiArray();
     const GpuArray<Real,AMREX_SPACEDIM> center({AMREX_D_DECL((phi[0]-plo[0])*0.5,(phi[1]-plo[1])*0.5,(phi[2]-plo[2])*0.5)});
@@ -342,6 +341,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     auto domain=geom_test.Domain();
     auto z=1/a_old-1;
     //From write_info.cpp
+    amrex::Real a_cur        = 1.0 / a_half;
     amrex::Real a_cur_inv    = 1.0 / a_cur;
     amrex::Real dt_a_cur_inv = dt * a_cur_inv;
     ShellFilter shell_filter_test(plo, phi, center, radius_inner, radius_outer, z, t, dt, domain);
@@ -404,7 +404,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 
         ptile_tmp.resize((this->ParticlesAt(lev,pti)).size());
 
-        auto num_output = filterAndTransformAndCopyParticles(ptile_tmp, ptile, 0, 0, np, shell_filter_test, shell_store_filter_test);
+        auto num_output = filterAndTransformAndCopyParticles(ptile_tmp, ptile.getParticleTileData(), 0, 0, np, shell_filter_test, shell_store_filter_test);
         ptile.swap(ptile_tmp);
         ptile.resize(num_output);
     }
