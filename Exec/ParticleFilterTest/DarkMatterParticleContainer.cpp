@@ -218,16 +218,17 @@ Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
 {
     auto np = src.numParticles();
     if (np == 0) { return 0; }
-    Gpu::DeviceVector<Index> mask(np);
+    Gpu::DeviceVector<Index> mask_vec(np);
+    auto * mask=mask_vec.dataPtr();
     const auto ptd = src.getConstParticleTileData();
     AMREX_HOST_DEVICE_FOR_1D( np, i,
     {
-      mask[i] = int(Pred(ptd[i]));
+      mask[i] = int(p(src,i));
     });
     const int num_output = Reduce::Sum<int>(np,
         [=] AMREX_GPU_DEVICE (int i) -> int
         {
-            return int(Pred(ptd[i]));
+	  return int(p(src,i));
         });
 
     Gpu::DeviceVector<Index> offsets(num_output);
@@ -247,9 +248,10 @@ Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
     {
       if(mask[i]>0)
 	for(int j=0;j<mask[i];j++)
-            f(dst_data, src_data, src_start+i,
+            f(dst_data,src_data, src_start+i,
               dst_start+p_offsets[src_start+j],j);
     });
+    return num_output;
 }
 
 template <typename PC, typename F>
@@ -340,9 +342,11 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     auto domain=geom_test.Domain();
     auto z=1/a_old-1;
     //From write_info.cpp
-
+    amrex::Real a_cur_inv    = 1.0 / a_cur;
+    amrex::Real dt_a_cur_inv = dt * a_cur_inv;
     ShellFilter shell_filter_test(plo, phi, center, radius_inner, radius_outer, z, t, dt, domain);
-    
+    ShellStoreFilter shell_store_filter_test(plo, phi, center, radius_inner, radius_outer, z, t, dt, domain, dt_a_cur_inv);
+
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
@@ -399,21 +403,8 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         ParticleContainer<10,0>::ParticleTileType ptile_tmp;
 
         ptile_tmp.resize((this->ParticlesAt(lev,pti)).size());
-//        amrex::copyParticles(ptile_tmp, ptile);
 
-        const FArrayBox& accel_fab= ((*ac_ptr)[0]);
-        Array4<amrex::Real const> accel= accel_fab.array();
-
-        int nc=AMREX_SPACEDIM;
-        amrex::ParallelFor(np,
-                           [=] AMREX_GPU_HOST_DEVICE ( long i)
-                           {
-                             store_dm_particle_single(pstruct[i],pstruct2[i],nc,
-                                                      accel,plo,phi,dxi,dt,a_old,
-                                                      a_half,do_move, radius_inner, radius_outer);
-                           });
-
-        auto num_output = amrex::filterParticles(ptile_tmp, ptile, shell_filter_test);
+        auto num_output = filterAndTransformAndCopyParticles(ptile_tmp, ptile, 0, 0, np, shell_filter_test, shell_store_filter_test);
         ptile.swap(ptile_tmp);
         ptile.resize(num_output);
     }
