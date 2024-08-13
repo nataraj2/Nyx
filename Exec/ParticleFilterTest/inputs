@@ -12,8 +12,10 @@ nyx.heat_cool_type   = 11
 #nyx.simd_width       = 8
 
 # Note we now set USE_CONST_SPECIES = TRUE in the GNUmakefile
-nyx.h_species=.76
-nyx.he_species=.24
+#nyx.h_species=.76
+#nyx.he_species=.24
+nyx.h_species=.7546
+nyx.he_species=.2454
 
 nyx.small_dens = 1.e-2
 nyx.small_temp = 1.e-2
@@ -26,7 +28,7 @@ gravity.mlmg_agglomeration=1
 gravity.mlmg_consolidation=1
 nyx.reuse_mlpoisson = 1
 
-nyx.initial_z = 159.0
+nyx.initial_z = 50.0
 nyx.final_z = 2.0
 
 #File written during the run: nstep | time | dt | redshift | a
@@ -49,11 +51,10 @@ geometry.coord_sys   =  0
 geometry.prob_lo     =  0     0     0
 
 #Domain size in Mpc
-geometry.prob_hi     =  28.49002849  28.49002849  28.49002849
+geometry.prob_hi     =  7700 7700 7700
 
-amr.n_cell           =  64  64  64
+amr.n_cell           = 32 32 32
 amr.max_grid_size    = 32
-#fabarray.mfiter_tile_size = 128 8 8
 fabarray.mfiter_tile_size = 1024000 8 8
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
@@ -69,9 +70,9 @@ nyx.do_hydro = 1
 nyx.do_grav  = 1
 
 # COSMOLOGY
-nyx.comoving_OmM = 0.275
-nyx.comoving_OmB = 0.046
-nyx.comoving_h   = 0.702e0
+nyx.comoving_OmM = 0.31
+nyx.comoving_OmB = 0.049389
+nyx.comoving_h   = 0.68
 
 # UVB and reionization
 nyx.inhomo_reion     = 0
@@ -91,8 +92,8 @@ nyx.do_dm_particles = 1
 # >>>>>>>>>>>>>  PARTICLE INIT OPTIONS <<<<<<<<<<<<<<<<
 #  "AsciiFile"        "Random"      "Cosmological"
 # >>>>>>>>>>>>>  PARTICLE INIT OPTIONS <<<<<<<<<<<<<<<<
-nyx.particle_init_type = BinaryFile
-nyx.binary_particle_file = 64sssss_20mpc.nyx
+nyx.particle_init_type = BinaryMetaFile
+nyx.binary_particle_file = Filelist.txt
 particles.nparts_per_read = 2097152
 
 # TIME STEP CONTROL
@@ -139,6 +140,9 @@ nyx.plot_z_values   = 7.0 6.0 5.0 4.0 3.0 2.0
 
 amr.plot_vars        = density xmom ymom zmom rho_e Temp phi_grav
 amr.derive_plot_vars = particle_mass_density particle_count
+
+# Lightcone
+nyx.lightcone_start_z=200
 
 # Halo Finder
 #nyx.analysis_z_values = 150 10 5 4 3 2
