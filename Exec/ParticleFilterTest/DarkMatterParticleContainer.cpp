@@ -117,8 +117,8 @@ struct ShellFilter
 		    ylen = src.m_rdata[1+1+3][i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
 		    zlen = src.m_rdata[2+1+3][i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
-                        //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
+                        result=result? true : (mag>m_radius_inner && mag<m_radius_outer);
+			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }
         }
         return result;
@@ -357,11 +357,11 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         const long np = pti.numParticles();
         int grid    = pti.index();
 
-        auto& ptile = ShellPC->DefineAndReturnParticleTile(lev, pti);
-        int old_np = ptile.size();
-        int num_to_add = np;
-        int new_np = old_np + num_to_add;
-        ptile.resize(new_np);
+	auto& ptile = ShellPC->DefineAndReturnParticleTile(lev, pti);
+	int old_np = ptile.size();
+	int num_to_add = np;
+	int new_np = old_np + num_to_add;
+	ptile.resize(new_np);
 
         const FArrayBox& accel_fab= ((*ac_ptr)[grid]);
         Array4<amrex::Real const> accel= accel_fab.array();
@@ -384,7 +384,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         ParticleTile<ParticleType, NArrayReal, NArrayInt, amrex::PinnedArenaAllocator> ptile_tmp;
 
         Gpu::Device::streamSynchronize();
-        }*/
+	}*/
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
@@ -653,16 +653,19 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                         ylen = p.pos(1)+(jdir)*(phi[1]-plo[1]) - center[1];
                         zlen = p.pos(2)+(kdir)*(phi[2]-plo[2]) - center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result=result? true : (mag>radius_inner && mag<radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
-                        if((mag>radius_inner && mag<radius_outer and zlen > -1000000.0 and zlen < 1000000.0)) {
-                            int comp=0;
-                            p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
-                            comp=1;
-                            p2.pos(comp) = p.pos(comp)+(jdir)*(phi[comp]-plo[comp]);
-                            comp=2;
-                            p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
-                        }
-                        //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
+                        result=result? true : (mag>radius_inner && mag<radius_outer);
+			if((mag>radius_inner && mag<radius_outer)) {
+			    int comp=0;
+                p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
+				Real x1 = p2.pos(comp);
+			    comp=1;
+                p2.pos(comp) = p.pos(comp)+(jdir)*(phi[comp]-plo[comp]);
+				Real y1 = p2.pos(comp);
+			    comp=2;
+                p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
+				Real z1 = p2.pos(comp);
+			}
+			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }
            for (int comp=0; comp < nc; ++comp) {
                p2.rdata(comp+1+3)=p.pos(comp);
