@@ -248,7 +248,6 @@ Nyx::advance_hydro_plus_particles (Real time,
             MultiFab grav_vec_old(ba, dm, AMREX_SPACEDIM, grav_n_grow);
             get_level(lev).gravity->get_old_grav_vector(lev, grav_vec_old, time);
             
-			//exit(0);
             for (int i = 0; i < Nyx::theActiveParticles().size(); i++) {
                 Real radius_inner = -1.e34;
                 Real radius_outer = -1.e34;
