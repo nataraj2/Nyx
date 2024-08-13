@@ -547,7 +547,6 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
 			    comp=2;
                 p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
 				Real z1 = p2.pos(comp);
-				printf("%0.15g, %0.15g, %0.15g\n",x1,y1,z1);
 			}
 			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }
