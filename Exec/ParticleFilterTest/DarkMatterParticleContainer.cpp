@@ -215,23 +215,23 @@ Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
                                           Index src_start, Index dst_start, N n, Pred&& p, F&& f) noexcept
 {
     long np = n;
+    const auto & src_data = src.getConstParticleTileData();
+ 
     if (np == 0) { return 0; }
     Gpu::DeviceVector<Index> mask_vec(np);
     auto * mask=mask_vec.dataPtr();
     const auto & ptd = src;
     AMREX_HOST_DEVICE_FOR_1D( np, i,
     {
-      mask[i] = int(p(src,i));
+      mask[i] = int(p(src_data,i));
     });
-    const int num_output = Reduce::Sum<int>(np,
-        [=] AMREX_GPU_DEVICE (int i) -> int
-        {
-	  return int(p(src,i));
-        });
 
-    Gpu::DeviceVector<Index> offsets(num_output);
+    Gpu::DeviceVector<Index> offsets(np);
     Gpu::exclusive_scan(mask, mask+np, offsets.begin());
+    const int num_output = offsets[np-1];
     dst.resize(num_output);
+
+    auto dst_data = dst.getParticleTileData();
 
     Index last_mask=0, last_offset=0;
     Gpu::copyAsync(Gpu::deviceToHost, mask+np-1, mask + np, &last_mask);
@@ -239,15 +239,13 @@ Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
 
     auto const* p_offsets = offsets.dataPtr();
 
-    const auto & src_data = src;
-          auto dst_data = dst.getParticleTileData();
     // f here should do the copy and transform parts (or maybe instead just do copy here, although we want the images specifically)
     AMREX_HOST_DEVICE_FOR_1D( np, i,
     {
       if(mask[i]>0)
 	for(int j=0;j<mask[i];j++)
             f(dst_data,src_data, src_start+i,
-              dst_start+p_offsets[src_start+j],j);
+              dst_start+p_offsets[src_start+i]+j,j);
     });
     return num_output;
 }
@@ -402,9 +400,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         int grid    = pti.index();
         ParticleContainer<10,0>::ParticleTileType ptile_tmp;
 
-        ptile_tmp.resize((this->ParticlesAt(lev,pti)).size());
-
-        auto num_output = filterAndTransformAndCopyParticles(ptile_tmp, ptile.getParticleTileData(), 0, 0, np, shell_filter_test, shell_store_filter_test);
+        auto num_output = filterAndTransformAndCopyParticles(ptile_tmp, ptile, 0, 0, np, shell_filter_test, shell_store_filter_test);
         ptile.swap(ptile_tmp);
         ptile.resize(num_output);
     }
