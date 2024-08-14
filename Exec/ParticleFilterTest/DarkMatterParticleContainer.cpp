@@ -1,6 +1,10 @@
 #include <stdint.h>
 
 #include <DarkMatterParticleContainer.H>
+#include <DarkMatterParticleContainer.H>
+#ifdef AMREX_USE_HDF5
+#include <AMReX_ParticleHDF5.H>
+#endif
 
 using namespace amrex;
 #include <constants_cosmo.H>
@@ -445,7 +449,17 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     real_comp_names_shell.push_back("yposvalid");
     real_comp_names_shell.push_back("zposvalid");
     if(radius_inner>0&&radius_outer>radius_inner)
-    ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+	int write_hdf5=0;
+#ifdef AMREX_USE_HDF5
+        write_hdf5=1;
+#endif
+	if(write_hdf5!=1)
+	    ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+#ifdef AMREX_USE_HDF5
+	else
+	    ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell);
+#endif
+
     Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles()<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
     //    ShellPC->amrex::ParticleContainer<7,0>::WritePlotFile(dir, name, real_comp_names_shell);
     if (ac_ptr != &acceleration) delete ac_ptr;
