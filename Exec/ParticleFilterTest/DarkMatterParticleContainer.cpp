@@ -113,17 +113,16 @@ struct ShellFilter
             maxind[2] = floor((m_radius_outer+lenz*0.5)/lenz);
 
             //printf("Value is %d\n", maxind);
-	    for(int idir=-maxind[0];idir<=maxind[0];idir++)
-	      for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
-		for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
-		  {
-		    xlen = src.m_rdata[0+1+3][i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
-		    ylen = src.m_rdata[1+1+3][i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
-		    zlen = src.m_rdata[2+1+3][i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
-                        Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
-                        //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
-                    }
+            for(int idir=-maxind[0];idir<=maxind[0];idir++)
+              for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
+                for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
+                  {
+                    xlen = src.m_rdata[0+1+3][i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+                    ylen = src.m_rdata[1+1+3][i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+                    zlen = src.m_rdata[2+1+3][i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+                    Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
+                    result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
+                  }
         }
         return result;
     }
@@ -143,8 +142,8 @@ struct ShellStoreFilter
                  Real z,
                  Real t,
                  Real dt,
-		 const Box& domain,
-		 const Real dt_a_cur_inv)
+                 const Box& domain,
+                 const Real dt_a_cur_inv)
         : m_plo(plo), m_phi(phi), m_center(center), m_radius_inner(radius_inner), m_radius_outer(radius_outer), m_z(z), m_t(t), m_dt(dt), m_domain(domain), m_dt_a_cur_inv(dt_a_cur_inv)
     {}
 
@@ -165,36 +164,36 @@ struct ShellStoreFilter
       maxind[2] = floor((m_radius_outer+zlen*0.5)/zlen);
 
       for(int idir=-maxind[0];idir<=maxind[0];idir++)
-	for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
-	  for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
-	    {
-	      xlen = src.m_rdata[0+1+3][src_i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
-	      ylen = src.m_rdata[1+1+3][src_i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
-	      zlen = src.m_rdata[2+1+3][src_i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
-	      Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
+        for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
+          for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
+            {
+              xlen = src.m_rdata[0+1+3][src_i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+              ylen = src.m_rdata[1+1+3][src_i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+              zlen = src.m_rdata[2+1+3][src_i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+              Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
 
-	      if(int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0))
-		local_index++;
+              if(int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0))
+                local_index++;
 
-	      if(local_index==index) {
-		dst.m_aos[dst_i].rdata(0)=src.m_rdata[0][src_i];
-		int comp=0;
-		dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(idir)*(m_phi[comp]-m_plo[comp]);
-		comp=1;
-		dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(jdir)*(m_phi[comp]-m_plo[comp]);
-		comp=2;
-		dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(kdir)*(m_phi[comp]-m_plo[comp]);
-		for (int comp=0; comp < nc; ++comp) {
-		  dst.m_aos[dst_i].rdata(comp+1+3)=src.pos(comp,src_i);
-		  dst.m_aos[dst_i].rdata(comp+1+3+3) = src.pos(comp,src_i) + m_dt_a_cur_inv * src.m_rdata[comp+1][src_i];
-		  dst.m_aos[dst_i].rdata(comp+1)=src.m_rdata[comp+1][src_i];
-			      //              p2.pos(comp)=p.pos(comp);
-		  dst.m_idcpu[dst_i]=src.m_idcpu[src_i];
-		}
-		return;
-	      }
-	      //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
-	    }
+              if(local_index==index) {
+                dst.m_aos[dst_i].rdata(0)=src.m_rdata[0][src_i];
+                int comp=0;
+                dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(idir)*(m_phi[comp]-m_plo[comp]);
+                comp=1;
+                dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(jdir)*(m_phi[comp]-m_plo[comp]);
+                comp=2;
+                dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(kdir)*(m_phi[comp]-m_plo[comp]);
+                for (int comp=0; comp < nc; ++comp) {
+                  dst.m_aos[dst_i].rdata(comp+1+3)=src.pos(comp,src_i);
+                  dst.m_aos[dst_i].rdata(comp+1+3+3) = src.pos(comp,src_i) + m_dt_a_cur_inv * src.m_rdata[comp+1][src_i];
+                  dst.m_aos[dst_i].rdata(comp+1)=src.m_rdata[comp+1][src_i];
+                              //              p2.pos(comp)=p.pos(comp);
+                  dst.m_idcpu[dst_i]=src.m_idcpu[src_i];
+                }
+                return;
+              }
+              //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
+            }
     }
 };
   //  the steps would be count number of output particles
@@ -247,7 +246,7 @@ Index filterAndTransformAndCopyParticles (DstTile& dst, const SrcTile& src,
     AMREX_HOST_DEVICE_FOR_1D( np, i,
     {
       if(mask[i]>0)
-	for(int j=0;j<mask[i];j++)
+        for(int j=0;j<mask[i];j++)
             f(dst_data,src_data, src_start+i,
               dst_start+p_offsets[src_start+i]+j,j);
     });
@@ -448,18 +447,18 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     real_comp_names_shell.push_back("xposvalid");
     real_comp_names_shell.push_back("yposvalid");
     real_comp_names_shell.push_back("zposvalid");
-    if(radius_inner>0&&radius_outer>radius_inner)
-	int write_hdf5=0;
+    if(radius_inner>0&&radius_outer>radius_inner) {
+        int write_hdf5=0;
 #ifdef AMREX_USE_HDF5
         write_hdf5=1;
 #endif
-	if(write_hdf5!=1)
-	    ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+        if(write_hdf5!=1)
+            ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
 #ifdef AMREX_USE_HDF5
-	else
-	    ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell);
+        else
+            ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell);
 #endif
-
+    }
     Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles()<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
     //    ShellPC->amrex::ParticleContainer<7,0>::WritePlotFile(dir, name, real_comp_names_shell);
     if (ac_ptr != &acceleration) delete ac_ptr;
@@ -663,14 +662,17 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                         ylen = p.pos(1)+(jdir)*(phi[1]-plo[1]) - center[1];
                         zlen = p.pos(2)+(kdir)*(phi[2]-plo[2]) - center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result=result? true : (mag>radius_inner && mag<radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
-                        if((mag>radius_inner && mag<radius_outer and zlen > -1000000.0 and zlen < 1000000.0)) {
+                        result=result? true : (mag>radius_inner && mag<radius_outer);
+                        if((mag>radius_inner && mag<radius_outer)) {
                             int comp=0;
-                            p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
+                p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
+                                Real x1 = p2.pos(comp);
                             comp=1;
-                            p2.pos(comp) = p.pos(comp)+(jdir)*(phi[comp]-plo[comp]);
+                p2.pos(comp) = p.pos(comp)+(jdir)*(phi[comp]-plo[comp]);
+                                Real y1 = p2.pos(comp);
                             comp=2;
-                            p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
+                p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
+                                Real z1 = p2.pos(comp);
                         }
                         //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }

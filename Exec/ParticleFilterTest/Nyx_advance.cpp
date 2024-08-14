@@ -240,26 +240,6 @@ Nyx::advance_hydro_plus_particles (Real time,
 
         MultiFab::RegionTag amrMoveKickDrift_tag("MoveKickDrift_" + std::to_string(level));
 
-		// Plot redshift vs comoving distance of light cone slice
-
-		/*Real zmin = 0.001;
-		Real zmax = 1000;
-		int nz = 100000;
-
-		FILE* file_rvsz;
-		file_rvsz = fopen("r_vs_z.txt","w");
-		for (int i=0;i<nz;i++){
-			Real radius;
-			Real zval = 0.001 + i*(zmax-zmin)/(nz-1);
-			std::cout << "Doing redshift" << i << " " << zval << "\n";
-			Real aval = 1.0/(1.0+zval);
-			integrate_distance_given_a(aval, 1.0, radius);
-			fprintf(file_rvsz,"%0.15g %0.15g\n", zval, radius/1e3);
-		}
-		fclose(file_rvsz);
-
-		exit(0);*/
-	
         for (int lev = level; lev <= finest_level_to_advance; lev++)
         {
             // We need grav_n_grow grow cells to track boundary particles
@@ -268,7 +248,6 @@ Nyx::advance_hydro_plus_particles (Real time,
             MultiFab grav_vec_old(ba, dm, AMREX_SPACEDIM, grav_n_grow);
             get_level(lev).gravity->get_old_grav_vector(lev, grav_vec_old, time);
             
-			//exit(0);
             for (int i = 0; i < Nyx::theActiveParticles().size(); i++) {
                 Real radius_inner = -1.e34;
                 Real radius_outer = -1.e34;
@@ -278,7 +257,6 @@ Nyx::advance_hydro_plus_particles (Real time,
                 integrate_distance_given_a(a_new, 1.0, radius_inner);
                 Print()<<radius_inner<<std::endl;
                 Print()<<radius_outer<<std::endl;
-				//exit(0);
                 }
                 Nyx::theActiveParticles()[i]->moveKickDrift(grav_vec_old, lev, time, dt, a_old, a_half, where_width, radius_inner, radius_outer);
             }
