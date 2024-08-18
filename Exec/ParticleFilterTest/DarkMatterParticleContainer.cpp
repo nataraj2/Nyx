@@ -447,6 +447,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     real_comp_names_shell.push_back("xposvalid");
     real_comp_names_shell.push_back("yposvalid");
     real_comp_names_shell.push_back("zposvalid");
+	std::string compression = "None@0";
     if(radius_inner>0&&radius_outer>radius_inner) {
         int write_hdf5=0;
 #ifdef AMREX_USE_HDF5
@@ -456,7 +457,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
             ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
 #ifdef AMREX_USE_HDF5
         else
-            ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell);
+            ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell, compression);
 #endif
     }
     Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles()<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
