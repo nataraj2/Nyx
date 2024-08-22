@@ -10,13 +10,14 @@ USE_MPI = TRUE
 # Use with Async IO
 MPI_THREAD_MULTIPLE = FALSE
 USE_OMP = FALSE
-USE_CUDA = TRUE
+USE_CUDA = FALSE
 
 USE_SUNDIALS      = TRUE
 USE_FORT_ODE = FALSE
 SUNDIALS_ROOT = /global/cfs/cdirs/m4106/jmsexton/sundials_shared/sundials/instdir
 #SUNDIALS_ROOT ?=  ${CURDIR}/$(TOP)/../sundials/instdir
-
+USE_HDF5 = TRUE
+HDF5_HOME = /opt/cray/pe/hdf5/1.12.2.9
 
 PROFILE       = FALSE
 TRACE_PROFILE = FALSE

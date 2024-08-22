@@ -1,6 +1,9 @@
 #include <stdint.h>
 
 #include <DarkMatterParticleContainer.H>
+#ifdef AMREX_USE_HDF5
+#include <AMReX_ParticleHDF5.H>
+#endif
 
 using namespace amrex;
 #include <constants_cosmo.H>
@@ -331,9 +334,22 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     real_comp_names_shell.push_back("xposvalid");
     real_comp_names_shell.push_back("yposvalid");
     real_comp_names_shell.push_back("zposvalid");
-    if(radius_inner>0&&radius_outer>radius_inner)
-    ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
-    Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles()<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
+    std::string compression = "None@0";
+    if(radius_inner>0&&radius_outer>radius_inner){
+		int write_hdf5=0;
+		#ifdef AMREX_USE_HDF5
+        	write_hdf5=1;
+		#endif
+		if(write_hdf5!=1)
+	    	ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+		#ifdef AMREX_USE_HDF5
+		else
+			printf("%s\n", "Writing HDF5 file");
+	    	ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell, compression);
+		#endif
+	}
+
+    Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles(false)<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
     //    ShellPC->amrex::ParticleContainer<7,0>::WritePlotFile(dir, name, real_comp_names_shell);
     if (ac_ptr != &acceleration) delete ac_ptr;
     
@@ -541,12 +557,16 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
 			    int comp=0;
                 p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
 				Real x1 = p2.pos(comp);
+				Real vx = p.rdata(comp+1);
 			    comp=1;
                 p2.pos(comp) = p.pos(comp)+(jdir)*(phi[comp]-plo[comp]);
 				Real y1 = p2.pos(comp);
+				Real vy = p.rdata(comp+1);
 			    comp=2;
                 p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
 				Real z1 = p2.pos(comp);
+				Real vz = p.rdata(comp+1);
+				printf("%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
 			}
 			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }
