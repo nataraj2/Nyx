@@ -3,10 +3,13 @@
 #include <Gravity.H>
 #include <constants_cosmo.H>
 #include <Forcing.H>
+#include <temp.H>
 
 using namespace amrex;
 
 using std::string;
+
+FILE *file_lightcone_csv;
 
 Real
 Nyx::advance (Real time,
@@ -240,6 +243,9 @@ Nyx::advance_hydro_plus_particles (Real time,
 
         MultiFab::RegionTag amrMoveKickDrift_tag("MoveKickDrift_" + std::to_string(level));
 
+		std::string filename=Concatenate("lightcone_", int(100*(1/a_old-1)), 7);
+		file_lightcone_csv = fopen(filename.c_str(),"w");
+
         for (int lev = level; lev <= finest_level_to_advance; lev++)
         {
             // We need grav_n_grow grow cells to track boundary particles
@@ -260,6 +266,7 @@ Nyx::advance_hydro_plus_particles (Real time,
                 }
                 Nyx::theActiveParticles()[i]->moveKickDrift(grav_vec_old, lev, time, dt, a_old, a_half, where_width, radius_inner, radius_outer);
             }
+			fclose(file_lightcone_csv);
 
             // Only need the coarsest virtual particles here.
                 if (lev == level && level < finest_level)
