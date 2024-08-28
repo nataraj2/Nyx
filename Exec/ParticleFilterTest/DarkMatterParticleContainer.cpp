@@ -100,7 +100,8 @@ struct ShellFilter
         int result=0;
         if(m_radius_inner<=0 || m_radius_outer<=0)
             return 0;
-        if(src.m_idcpu[i]>0) {
+
+        if(src.m_aos[i].id()>0) {
 
             Real xlen, ylen, zlen;
             
@@ -116,13 +117,13 @@ struct ShellFilter
             for(int idir=-maxind[0];idir<=maxind[0];idir++)
               for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
                 for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
-                  {
-                    xlen = src.m_rdata[0+1+3][i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
-                    ylen = src.m_rdata[1+1+3][i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
-                    zlen = src.m_rdata[2+1+3][i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
-                    Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                    result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
-                  }
+                    {
+                        xlen = src.m_aos[i].rdata(0+1+3)+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+                        ylen = src.m_aos[i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+                        zlen = src.m_aos[i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+                        Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
+                        result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
+                    }
         }
         return result;
     }
@@ -167,28 +168,29 @@ struct ShellStoreFilter
         for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
           for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
             {
-              xlen = src.m_rdata[0+1+3][src_i]+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
-              ylen = src.m_rdata[1+1+3][src_i]+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
-              zlen = src.m_rdata[2+1+3][src_i]+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+              xlen = src.m_aos[src_i].rdata(0+1+3)+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+              ylen = src.m_aos[src_i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+              zlen = src.m_aos[src_i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
               Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
 
               if(int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0))
                 local_index++;
 
               if(local_index==index) {
-                dst.m_aos[dst_i].rdata(0)=src.m_rdata[0][src_i];
+                dst.m_aos[dst_i].rdata(0)=src.m_aos[src_i].rdata(0);
                 int comp=0;
-                dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(idir)*(m_phi[comp]-m_plo[comp]);
+                dst.m_aos[dst_i].pos(comp) = src.m_aos[src_i].pos(comp)+(idir)*(m_phi[comp]-m_plo[comp]);
                 comp=1;
-                dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(jdir)*(m_phi[comp]-m_plo[comp]);
+                dst.m_aos[dst_i].pos(comp) = src.m_aos[src_i].pos(comp)+(jdir)*(m_phi[comp]-m_plo[comp]);
                 comp=2;
-                dst.m_aos[dst_i].pos(comp) = src.pos(comp,src_i)+(kdir)*(m_phi[comp]-m_plo[comp]);
+                dst.m_aos[dst_i].pos(comp) = src.m_aos[src_i].pos(comp)+(kdir)*(m_phi[comp]-m_plo[comp]);
                 for (int comp=0; comp < nc; ++comp) {
-                  dst.m_aos[dst_i].rdata(comp+1+3)=src.pos(comp,src_i);
-                  dst.m_aos[dst_i].rdata(comp+1+3+3) = src.pos(comp,src_i) + m_dt_a_cur_inv * src.m_rdata[comp+1][src_i];
-                  dst.m_aos[dst_i].rdata(comp+1)=src.m_rdata[comp+1][src_i];
+                  dst.m_aos[dst_i].rdata(comp+1+3)=src.m_aos[src_i].pos(comp);
+                  dst.m_aos[dst_i].rdata(comp+1+3+3) = src.m_aos[src_i].pos(comp) + m_dt_a_cur_inv * src.m_aos[src_i].rdata(comp+1);
+                  dst.m_aos[dst_i].rdata(comp+1)=src.m_aos[src_i].rdata(comp+1);
                               //              p2.pos(comp)=p.pos(comp);
-                  dst.m_idcpu[dst_i]=src.m_idcpu[src_i];
+                  dst.m_aos[dst_i].id()=src.m_aos[src_i].id();
+                  dst.m_aos[dst_i].cpu()=src.m_aos[src_i].cpu();
                 }
                 return;
               }
