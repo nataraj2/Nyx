@@ -122,7 +122,7 @@ struct ShellFilter
                         ylen = src.m_aos[i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
                         zlen = src.m_aos[i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
-                        result+=int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0);
+                        result+=int(mag>m_radius_inner && mag<m_radius_outer);
                     }
         }
         return result;
@@ -173,7 +173,7 @@ struct ShellStoreFilter
               zlen = src.m_aos[src_i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
               Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
 
-              if(int(mag>m_radius_inner && mag<m_radius_outer and zlen > -1000000.0 and zlen < 1000000.0))
+              if(int(mag>m_radius_inner && mag<m_radius_outer))
                 local_index++;
 
               if(local_index==index) {
@@ -449,7 +449,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     real_comp_names_shell.push_back("xposvalid");
     real_comp_names_shell.push_back("yposvalid");
     real_comp_names_shell.push_back("zposvalid");
-	std::string compression = "None@0";
+    std::string compression = "None@0";
     if(radius_inner>0&&radius_outer>radius_inner) {
         int write_hdf5=0;
 #ifdef AMREX_USE_HDF5
