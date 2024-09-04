@@ -1,13 +1,14 @@
 #include <stdint.h>
 
 #include <DarkMatterParticleContainer.H>
-#include <DarkMatterParticleContainer.H>
 #ifdef AMREX_USE_HDF5
 #include <AMReX_ParticleHDF5.H>
 #endif
 
 using namespace amrex;
 #include <constants_cosmo.H>
+
+
 /// These are helper functions used when initializing from a morton-ordered
 /// binary particle file.
 namespace {
@@ -91,7 +92,7 @@ struct ShellFilter
                  const Box& domain)
         : m_plo(plo), m_phi(phi), m_center(center), m_radius_inner(radius_inner), m_radius_outer(radius_outer), m_z(z), m_t(t), m_dt(dt), m_domain(domain)
     {}
-
+#ifdef AMREX_USE_GPU
     //c_light is the constant for speed of light [cm/s]
     template <typename SrcData>
     AMREX_GPU_HOST_DEVICE
@@ -129,6 +130,45 @@ struct ShellFilter
     }
 };
 
+#else
+    //c_light is the constant for speed of light [cm/s]
+    template <typename SrcData>
+    AMREX_GPU_HOST_DEVICE
+    bool operator() (const SrcData& src, int i) const noexcept
+    {
+        bool result=false;
+        if(m_radius_inner<=0 || m_radius_outer<=0)
+            return false;
+	if(src.m_aos[i].id()>0) {
+
+			Real xlen, ylen, zlen;
+            
+			Real lenx = m_phi[0]-m_plo[0];
+            Real leny = m_phi[1]-m_plo[1];
+            Real lenz = m_phi[2]-m_plo[2];
+            int maxind[3];
+            maxind[0] = floor((m_radius_outer+lenx*0.5)/lenx);
+            maxind[1] = floor((m_radius_outer+leny*0.5)/leny);
+            maxind[2] = floor((m_radius_outer+lenz*0.5)/lenz);
+
+            //printf("Value is %d\n", maxind);
+
+        for(int idir=-maxind[0];idir<=maxind[0];idir++)
+            for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
+                for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
+                    {
+                        xlen = src.m_aos[i].rdata(0+1+3)+(idir)*(m_phi[0]-m_plo[0]) - m_center[0];
+                        ylen = src.m_aos[i].rdata(1+1+3)+(jdir)*(m_phi[1]-m_plo[1]) - m_center[1];
+                        zlen = src.m_aos[i].rdata(2+1+3)+(kdir)*(m_phi[2]-m_plo[2]) - m_center[2];
+                        Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
+                        result=result? true : (mag>m_radius_inner && mag<m_radius_outer);
+			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
+                    }
+	}
+        return (result);
+    }
+};
+#endif
 struct ShellStoreFilter
 {
     GpuArray<Real, AMREX_SPACEDIM> m_plo, m_phi, m_center;
@@ -198,6 +238,7 @@ struct ShellStoreFilter
             }
     }
 };
+
   //  the steps would be count number of output particles
   //  prefix sum the counts
   //  resize the destination tile
@@ -334,8 +375,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     ShellPC->resizeData();
     ParticleContainer<10,0>::ParticleInitData pdata = {{}, {}, {}, {}};
     ShellPC->InitNRandomPerCell(1,pdata);
-    
-    //    ShellPC->resize(pc->TotalNumberOfParticles());
+    //    ShellPC->resize(pc.TotalNumberOfParticles());
     auto geom_test=pc->Geom(lev);
     const GpuArray<Real,AMREX_SPACEDIM> phi=geom_test.ProbHiArray();
     const GpuArray<Real,AMREX_SPACEDIM> center({AMREX_D_DECL((phi[0]-plo[0])*0.5,(phi[1]-plo[1])*0.5,(phi[2]-plo[2])*0.5)});
@@ -349,7 +389,6 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     amrex::Real dt_a_cur_inv = dt * a_cur_inv;
     ShellFilter shell_filter_test(plo, phi, center, radius_inner, radius_outer, z, t, dt, domain);
     ShellStoreFilter shell_store_filter_test(plo, phi, center, radius_inner, radius_outer, z, t, dt, domain, dt_a_cur_inv);
-
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
@@ -387,7 +426,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         ParticleTile<ParticleType, NArrayReal, NArrayInt, amrex::PinnedArenaAllocator> ptile_tmp;
 
         Gpu::Device::streamSynchronize();
-        }*/
+    }*/
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
@@ -400,7 +439,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 
         auto& particles2 = (ShellPC->ParticlesAt(lev,pti)).GetArrayOfStructs();
         auto* pstruct2 = particles2().data();
-
+#ifdef AMREX_USE_GPU
         const long np = pti.numParticles();
         int grid    = pti.index();
         ParticleContainer<10,0>::ParticleTileType ptile_tmp;
@@ -409,6 +448,38 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         ptile.swap(ptile_tmp);
         ptile.resize(num_output);
     }
+#else
+        auto ptile_tmp = ptile;
+	//        ptile_tmp.resize((ShellPC->ParticlesAt(lev,pti)).size());
+        ptile_tmp.resize((this->ParticlesAt(lev,pti)).size());
+
+        const long np = pti.numParticles();
+        int grid    = pti.index();
+
+        const FArrayBox& accel_fab= ((*ac_ptr)[0]);
+        Array4<amrex::Real const> accel= accel_fab.array();
+
+        int nc=AMREX_SPACEDIM;
+	int num_output=0;
+        amrex::ParallelFor(np,
+                           [=] AMREX_GPU_HOST_DEVICE ( long i)
+                           {
+                             store_dm_particle_single(pstruct[i],pstruct2[i],nc,
+                                                      accel,plo,phi,dxi,dt,a_old,
+                                                      a_half,do_move, radius_inner, radius_outer);
+                           });
+    for(int i=0;i<np;i++) {
+       const amrex::ParticleContainer<1+AMREX_SPACEDIM+6, 0>::SuperParticleType p = pstruct2[i];
+       if(shell_filter_test(ptile.getConstParticleTileData(),i)) {
+           ptile_tmp.push_back(pstruct2[i]);
+	   num_output++;
+       }
+    }
+    //        auto num_output = amrex::filterParticles(ptile_tmp, ptile, shell_filter_test);
+        ptile.swap(ptile_tmp);
+        ptile.resize(num_output);
+}
+#endif
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -645,17 +716,17 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
     if (do_move == 1) 
          {
             p2.rdata(0)=p.rdata(0);
-                    bool result=false;
+            bool result=false;
             Real lenx = phi[0]-plo[0];
-                        Real leny = phi[1]-plo[1];
-                        Real lenz = phi[2]-plo[2];
-                        int maxind[3]; 
-                        maxind[0] = floor((radius_outer+lenx*0.5)/lenx);
-                        maxind[1] = floor((radius_outer+leny*0.5)/leny);
-                        maxind[2] = floor((radius_outer+lenz*0.5)/lenz);
+            Real leny = phi[1]-plo[1];
+            Real lenz = phi[2]-plo[2];
+            int maxind[3]; 
+            maxind[0] = floor((radius_outer+lenx*0.5)/lenx);
+            maxind[1] = floor((radius_outer+leny*0.5)/leny);
+            maxind[2] = floor((radius_outer+lenz*0.5)/lenz);
 
-                        Real xlen, ylen, zlen;
-                        //printf("Value is %d\n", maxind);
+            Real xlen, ylen, zlen;
+            //printf("Value is %d\n", maxind);
 
         for(int idir=-maxind[0];idir<=maxind[0];idir++)
             for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
@@ -669,19 +740,23 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                         if((mag>radius_inner && mag<radius_outer)) {
                             int comp=0;
                 p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
-                                Real x1 = p2.pos(comp);
-                            comp=1;
+                Real x1 = p2.pos(comp);
+                Real vx = p.rdata(comp+1);
+                comp=1;
                 p2.pos(comp) = p.pos(comp)+(jdir)*(phi[comp]-plo[comp]);
-                                Real y1 = p2.pos(comp);
-                            comp=2;
+                Real y1 = p2.pos(comp);
+                Real vy = p.rdata(comp+1);
+                comp=2;
                 p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
-                                Real z1 = p2.pos(comp);
-                        }
-                        //                      Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
+                Real z1 = p2.pos(comp);
+                Real vz = p.rdata(comp+1);
+                //				printf("%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
+            }
+            //     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }
            for (int comp=0; comp < nc; ++comp) {
                p2.rdata(comp+1+3)=p.pos(comp);
-                   p2.rdata(comp+1+3+3) = p.pos(comp) + dt_a_cur_inv * p.rdata(comp+1);
+               p2.rdata(comp+1+3+3) = p.pos(comp) + dt_a_cur_inv * p.rdata(comp+1);
                p2.rdata(comp+1)=p.rdata(comp+1);
                //              p2.pos(comp)=p.pos(comp);
                p2.id()=p.id();
