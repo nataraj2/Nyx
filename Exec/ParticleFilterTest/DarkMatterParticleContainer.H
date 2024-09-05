@@ -64,7 +64,7 @@ AMREX_GPU_HOST_DEVICE AMREX_INLINE void store_dm_particle_single (amrex::Particl
                                                                   amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& phi,
                                                                   amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxi,
                                                                   const amrex::Real& dt, const amrex::Real& a_prev,
-                                                                  const amrex::Real& a_cur, const int& do_move, const amrex::Real& radius_inner, const amrex::Real& radius_outer);
+                                                                  const amrex::Real& a_cur, const int& do_move, const amrex::Real& radius_inner, const amrex::Real& radius_outer, int index);
 
 #endif /* _DarkMatterParticleContainer_H_ */
 

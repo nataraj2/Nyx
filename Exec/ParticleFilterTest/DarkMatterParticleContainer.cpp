@@ -92,7 +92,7 @@ struct ShellFilter
                  const Box& domain)
         : m_plo(plo), m_phi(phi), m_center(center), m_radius_inner(radius_inner), m_radius_outer(radius_outer), m_z(z), m_t(t), m_dt(dt), m_domain(domain)
     {}
-#ifdef AMREX_USE_GPU
+#if 1
     //c_light is the constant for speed of light [cm/s]
     template <typename SrcData>
     AMREX_GPU_HOST_DEVICE
@@ -461,18 +461,21 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 
         int nc=AMREX_SPACEDIM;
 	int num_output=0;
-        amrex::ParallelFor(np,
-                           [=] AMREX_GPU_HOST_DEVICE ( long i)
-                           {
+        for(int i=0;i<np;i++) {
+	    int index=0;
                              store_dm_particle_single(pstruct[i],pstruct2[i],nc,
                                                       accel,plo,phi,dxi,dt,a_old,
-                                                      a_half,do_move, radius_inner, radius_outer);
-                           });
-    for(int i=0;i<np;i++) {
+                                                      a_half,do_move, radius_inner, radius_outer,index);
        const amrex::ParticleContainer<1+AMREX_SPACEDIM+6, 0>::SuperParticleType p = pstruct2[i];
-       if(shell_filter_test(ptile.getConstParticleTileData(),i)) {
+       int mask=shell_filter_test(ptile.getConstParticleTileData(),i);
+       if(mask>0) {
+	   for(int j=0;j<mask;j++) {
+                             store_dm_particle_single(pstruct[i],pstruct2[i],nc,
+                                                      accel,plo,phi,dxi,dt,a_old,
+                                                      a_half,do_move, radius_inner, radius_outer,j);
            ptile_tmp.push_back(pstruct2[i]);
 	   num_output++;
+	   }
        }
     }
     //        auto num_output = amrex::filterParticles(ptile_tmp, ptile, shell_filter_test);
@@ -706,7 +709,7 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                                amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& phi,
                                amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxi,
                                const amrex::Real& dt, const amrex::Real& a_prev,
-                               const amrex::Real& a_cur, const int& do_move, const Real& radius_inner, const Real& radius_outer)
+                               const amrex::Real& a_cur, const int& do_move, const Real& radius_inner, const Real& radius_outer, int index)
 {
     amrex::Real half_dt       = 0.5 * dt;
     amrex::Real a_cur_inv    = 1.0 / a_cur;
@@ -727,7 +730,7 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
 
             Real xlen, ylen, zlen;
             //printf("Value is %d\n", maxind);
-
+	    int local_index=0;
         for(int idir=-maxind[0];idir<=maxind[0];idir++)
             for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
                 for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
@@ -737,8 +740,11 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                         zlen = p.pos(2)+(kdir)*(phi[2]-plo[2]) - center[2];
                         Real mag = sqrt(xlen*xlen+ylen*ylen+zlen*zlen);
                         result=result? true : (mag>radius_inner && mag<radius_outer);
-                        if((mag>radius_inner && mag<radius_outer)) {
-                            int comp=0;
+	      if(int(mag>radius_inner && mag<radius_outer))
+                local_index++;
+
+              if(local_index==index) {
+                int comp=0;
                 p2.pos(comp) = p.pos(comp)+(idir)*(phi[comp]-plo[comp]);
                 Real x1 = p2.pos(comp);
                 Real vx = p.rdata(comp+1);
@@ -751,9 +757,9 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                 Real z1 = p2.pos(comp);
                 Real vz = p.rdata(comp+1);
                 //				printf("%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
-            }
+			
             //     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
-                    }
+                    
            for (int comp=0; comp < nc; ++comp) {
                p2.rdata(comp+1+3)=p.pos(comp);
                p2.rdata(comp+1+3+3) = p.pos(comp) + dt_a_cur_inv * p.rdata(comp+1);
@@ -762,6 +768,9 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                p2.id()=p.id();
                p2.cpu()=p.cpu();
            }
+	   return;
+	      }
+		    }
          }
 
 }
