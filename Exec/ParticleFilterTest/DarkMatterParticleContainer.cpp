@@ -731,7 +731,7 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
 
             Real xlen, ylen, zlen;
             //printf("Value is %d\n", maxind);
-	    int local_index=0;
+	    int local_index=-1;
         for(int idir=-maxind[0];idir<=maxind[0];idir++)
             for(int jdir=-maxind[1];jdir<=maxind[1];jdir++)
                 for(int kdir=-maxind[2];kdir<=maxind[2];kdir++)
