@@ -450,6 +450,7 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
     }
 #else
         auto ptile_tmp = ptile;
+        ParticleContainer<10,0>::ParticleTileType ptile_tmp2;
 	//        ptile_tmp.resize((ShellPC->ParticlesAt(lev,pti)).size());
         ptile_tmp.resize((this->ParticlesAt(lev,pti)).size());
 
@@ -473,13 +474,13 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
                              store_dm_particle_single(pstruct[i],pstruct2[i],nc,
                                                       accel,plo,phi,dxi,dt,a_old,
                                                       a_half,do_move, radius_inner, radius_outer,j);
-           ptile_tmp.push_back(pstruct2[i]);
+           ptile_tmp2.push_back(pstruct2[i]);
 	   num_output++;
 	   }
        }
     }
     //        auto num_output = amrex::filterParticles(ptile_tmp, ptile, shell_filter_test);
-        ptile.swap(ptile_tmp);
+        ptile.swap(ptile_tmp2);
         ptile.resize(num_output);
 }
 #endif
