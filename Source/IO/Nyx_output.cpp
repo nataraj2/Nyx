@@ -88,7 +88,7 @@ Nyx::writePlotFilePre (const std::string& /*dir*/, ostream& /*os*/)
     else
     {
   if(Nyx::theDMPC()) {
-    Nyx::theDMPC()->WritePlotFilePre();
+    //Nyx::theDMPC()->WritePlotFilePre();
   }
 #ifdef AGN
   if(Nyx::theAPC()) {
@@ -325,7 +325,7 @@ Nyx::writePlotFilePost (const std::string& dir, ostream& /*os*/)
     //
     // Write the particles and `comoving_a` in a plotfile directory. 
     //
-    particle_plot_file(dir);
+    //particle_plot_file(dir);
 #endif
 
     // Write out all parameters into the plotfile
@@ -349,7 +349,7 @@ Nyx::writePlotFilePost (const std::string& dir, ostream& /*os*/)
 
 
   if(Nyx::theDMPC()) {
-    Nyx::theDMPC()->WritePlotFilePost();
+    //Nyx::theDMPC()->WritePlotFilePost();
   }
 #ifdef AGN
   if(Nyx::theAPC()) {
