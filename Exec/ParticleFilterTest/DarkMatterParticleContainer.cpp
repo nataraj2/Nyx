@@ -343,16 +343,18 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 		#ifdef AMREX_USE_HDF5
         	write_hdf5=1;
 		#endif
-		if(write_hdf5!=1)
-	    	ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+		if(write_hdf5!=1) {
+	    	//ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+		}
 		#ifdef AMREX_USE_HDF5
-		else
+		else {
 			printf("%s\n", "Writing HDF5 file");
 	    	ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell, compression);
+		}
 		#endif
 	}
 
-    Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles(false)<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
+    //Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles(false)<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
     //    ShellPC->amrex::ParticleContainer<7,0>::WritePlotFile(dir, name, real_comp_names_shell);
     if (ac_ptr != &acceleration) delete ac_ptr;
     
@@ -392,6 +394,8 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
             Gpu::streamSynchronize();
         }
     }
+
+	delete ShellPC;
 }
 
 void
@@ -569,7 +573,7 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                 p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
 				Real z1 = p2.pos(comp);
 				Real vz = p.rdata(comp+1);
-				fprintf(file_lightcone_csv,"%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
+				//fprintf(file_lightcone_csv,"%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
 			}
 			//     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
                     }

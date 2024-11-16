@@ -5,6 +5,10 @@
 #include <Forcing.H>
 #include <temp.H>
 
+#include <iomanip>   // for std::setw and std::setfill
+#include <sstream>   // for std::ostringstream
+#include <filesystem> // for std::filesystem::create_directory
+
 using namespace amrex;
 
 using std::string;
@@ -243,8 +247,29 @@ Nyx::advance_hydro_plus_particles (Real time,
 
         MultiFab::RegionTag amrMoveKickDrift_tag("MoveKickDrift_" + std::to_string(level));
 
-		std::string filename=Concatenate("lightcone_", int(100*(1/a_old-1)), 7);
+		int rank = amrex::ParallelDescriptor::MyProc();
+
+		// Format the rank as a zero-padded, four-digit string
+	    std::ostringstream oss;
+    	oss << "dir_lightcone" << std::setw(4) << std::setfill('0') << rank;
+    	std::string dir_name = oss.str();
+
+		// Create a directory with the formatted name
+    	try {
+        //	std::filesystem::create_directory(dir_name);
+        	//std::cout << "Processor " << rank << " created directory: " << dir_name << std::endl;
+    	} catch (const std::filesystem::filesystem_error& e) {
+        	std::cerr << "Error creating directory on processor " << rank << ": " << e.what() << std::endl;
+    	}
+
+		/*std::string filename0=Concatenate("lightcone_", rank, 4);
+		filename0=filename0+"_";
+		std::string filename1=Concatenate(filename0, int(100*(1/a_old-1)), 7);
+		std::string filename="./"+dir_name+"/"+filename1 +  ".csv";
 		file_lightcone_csv = fopen(filename.c_str(),"w");
+		if(ParallelDescriptor::IOProcessor()) {
+	    	fprintf(file_lightcone_csv,"%s, %s, %s, %s, %s, %s\n", "x", "y", "z", "vx", "vy", "vz");
+		}*/
 
         for (int lev = level; lev <= finest_level_to_advance; lev++)
         {
@@ -266,7 +291,7 @@ Nyx::advance_hydro_plus_particles (Real time,
                 }
                 Nyx::theActiveParticles()[i]->moveKickDrift(grav_vec_old, lev, time, dt, a_old, a_half, where_width, radius_inner, radius_outer);
             }
-			fclose(file_lightcone_csv);
+			//fclose(file_lightcone_csv);
 
             // Only need the coarsest virtual particles here.
                 if (lev == level && level < finest_level)
