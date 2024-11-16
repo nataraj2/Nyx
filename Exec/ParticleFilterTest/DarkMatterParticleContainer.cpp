@@ -7,7 +7,7 @@
 
 using namespace amrex;
 #include <constants_cosmo.H>
-
+#include <temp.H>
 
 /// These are helper functions used when initializing from a morton-ordered
 /// binary particle file.
@@ -757,10 +757,8 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                 p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
                 Real z1 = p2.pos(comp);
                 Real vz = p.rdata(comp+1);
-                //				printf("%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
-			
-            //     	                Print()<<xlen<<"\t"<<ylen<<"\t"<<zlen<<"\t"<<mag<<"\t"<<m_radius_inner<<"\t"<<m_radius_outer<<"\t"<<result<<std::endl;
-                    
+				fprintf(file_lightcone_csv,"%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
+
            for (int comp=0; comp < nc; ++comp) {
                p2.rdata(comp+1+3)=p.pos(comp);
                p2.rdata(comp+1+3+3) = p.pos(comp) + dt_a_cur_inv * p.rdata(comp+1);
