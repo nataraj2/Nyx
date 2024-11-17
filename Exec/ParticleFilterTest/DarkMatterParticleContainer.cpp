@@ -461,19 +461,19 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
         Array4<amrex::Real const> accel= accel_fab.array();
 
         int nc=AMREX_SPACEDIM;
-	int num_output=0;
+	    int num_output=0;
         for(int i=0;i<np;i++) {
-	    int index=0;
-                             store_dm_particle_single(pstruct[i],pstruct2[i],nc,
-                                                      accel,plo,phi,dxi,dt,a_old,
-                                                      a_half,do_move, radius_inner, radius_outer,index);
+	    	int index=0;
+        	store_dm_particle_single(pstruct[i],pstruct2[i],nc,
+                                     accel,plo,phi,dxi,dt,a_old,
+                                     a_half,do_move, radius_inner, radius_outer,index);
        const amrex::ParticleContainer<1+AMREX_SPACEDIM+6, 0>::SuperParticleType p = pstruct2[i];
        int mask=shell_filter_test(ptile.getConstParticleTileData(),i);
        if(mask>0) {
 	   for(int j=0;j<mask;j++) {
-                             store_dm_particle_single(pstruct[i],pstruct2[i],nc,
-                                                      accel,plo,phi,dxi,dt,a_old,
-                                                      a_half,do_move, radius_inner, radius_outer,j);
+           store_dm_particle_single(pstruct[i],pstruct2[i],nc,
+                                    accel,plo,phi,dxi,dt,a_old,
+                                    a_half,do_move, radius_inner, radius_outer,j,true);
            ptile_tmp2.push_back(pstruct2[i]);
 	   num_output++;
 	   }
@@ -530,11 +530,13 @@ DarkMatterParticleContainer::moveKickDrift (amrex::MultiFab&       acceleration,
 #ifdef AMREX_USE_HDF5
         write_hdf5=1;
 #endif
-        if(write_hdf5!=1)
-            ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+        if(write_hdf5!=1){
+            //ShellPC->WritePlotFile(dir, name, real_comp_names_shell);
+		}
 #ifdef AMREX_USE_HDF5
-        else
+        else{
             ShellPC->WritePlotFileHDF5(dir, name, real_comp_names_shell, compression);
+		}
 #endif
     }
     Print()<<"After write\t"<<ShellPC->TotalNumberOfParticles()<<"\t"<<a_old<<"\t"<<do_move<<"\t"<<lev<<"\t"<<t<<"\t"<<dt<<"\t"<<a_half<<"\t"<<where_width<<"\t"<<radius_inner<<std::endl;
@@ -710,7 +712,8 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                                amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& phi,
                                amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dxi,
                                const amrex::Real& dt, const amrex::Real& a_prev,
-                               const amrex::Real& a_cur, const int& do_move, const Real& radius_inner, const Real& radius_outer, int index)
+                               const amrex::Real& a_cur, const int& do_move, const Real& radius_inner, 
+							   const Real& radius_outer, int index, const bool is_file_write)
 {
     amrex::Real half_dt       = 0.5 * dt;
     amrex::Real a_cur_inv    = 1.0 / a_cur;
@@ -757,7 +760,16 @@ void store_dm_particle_single (amrex::ParticleContainer<1+AMREX_SPACEDIM, 0>::Su
                 p2.pos(comp) = p.pos(comp)+(kdir)*(phi[comp]-plo[comp]);
                 Real z1 = p2.pos(comp);
                 Real vz = p.rdata(comp+1);
-				fprintf(file_lightcone_csv,"%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
+
+				// There are two calls to this routine. Do the particle output writing only once 
+				// based on the bool.
+				if(is_file_write) {
+					//fprintf(file_lightcone_csv,"%0.15g, %0.15g, %0.15g, %0.15g, %0.15g, %0.15g \n", x1, y1, z1, vx, vy, vz);
+					myParticle tmp;
+					tmp.x = x1; tmp.y = y1; tmp.z = z1;
+					tmp.vx = vx; tmp.vy = vy; tmp.vz = vz;
+					shell_particles.emplace_back(tmp);
+				}
 
            for (int comp=0; comp < nc; ++comp) {
                p2.rdata(comp+1+3)=p.pos(comp);
