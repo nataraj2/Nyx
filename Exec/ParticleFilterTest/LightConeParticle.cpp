@@ -20,7 +20,7 @@ void writeBinaryVTK(const std::string& filename, const std::vector<LightConePart
 	int size = amrex::ParallelDescriptor::NProcs();
 
     long int local_num_particles = particles.size();
-    long int total_num_particles = 0;
+    long int total_num_particles = local_num_particles;
 
     // Get total particles across all ranks
 	amrex::ParallelDescriptor::ReduceLongSum(total_num_particles);
@@ -91,10 +91,6 @@ void writeBinarySimple(const std::string& filename, const std::vector<LightConeP
 	int size = amrex::ParallelDescriptor::NProcs();
 
     long int local_num_particles = particles.size();
-    long int total_num_particles = 0;
-
-    // Get total particles across all ranks
-	amrex::ParallelDescriptor::ReduceLongSum(total_num_particles);
 
     // Compute offset for this rank's data
     size_t offset = 0;
