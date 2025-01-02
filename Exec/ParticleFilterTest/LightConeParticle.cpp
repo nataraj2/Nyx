@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <AMReX_ParallelDescriptor.H>
 
 #include <LightConeParticle.H>
 
@@ -14,15 +15,15 @@ void SwapEnd(float& val) {
 }
 
 void writeBinaryVTK(const std::string& filename, const std::vector<LightConeParticle>& particles) {
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    size_t local_num_particles = particles.size();
-    size_t total_num_particles = 0;
+	int rank = amrex::ParallelDescriptor::MyProc();
+	int size = amrex::ParallelDescriptor::NProcs();
+
+    long int local_num_particles = particles.size();
+    long int total_num_particles = 0;
 
     // Get total particles across all ranks
-    MPI_Reduce(&local_num_particles, &total_num_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	amrex::ParallelDescriptor::ReduceLongSum(total_num_particles);
 
     // Compute offset for this rank's data
     size_t offset = 0;
@@ -34,8 +35,7 @@ void writeBinaryVTK(const std::string& filename, const std::vector<LightConePart
     if (rank == 0) {
         std::ofstream file(filename, std::ios::binary);
         if (!file) {
-            std::cerr << "Error: Could not open file " << filename << "\n";
-            MPI_Abort(MPI_COMM_WORLD, 1);
+            amrex::Abort("Error: Could not open file " + filename + "\n");
         }
 
         // Write the header
@@ -52,7 +52,7 @@ void writeBinaryVTK(const std::string& filename, const std::vector<LightConePart
     }
 
     // Broadcast the header size to all ranks
-    MPI_Bcast(&header_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+	amrex::ParallelDescriptor::Bcast(&header_size, 1, 0);
 
     // Use MPI collective I/O for binary data
     MPI_File mpi_file;
@@ -86,28 +86,27 @@ void writeBinaryVTK(const std::string& filename, const std::vector<LightConePart
 }
 
 void writeBinarySimple(const std::string& filename, const std::vector<LightConeParticle>& particles) {
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    size_t local_num_particles = particles.size();
-    size_t total_num_particles = 0;
+	int rank = amrex::ParallelDescriptor::MyProc();
+	int size = amrex::ParallelDescriptor::NProcs();
+
+    long int local_num_particles = particles.size();
+    long int total_num_particles = 0;
 
     // Get total particles across all ranks
-    MPI_Reduce(&local_num_particles, &total_num_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	amrex::ParallelDescriptor::ReduceLongSum(total_num_particles);
 
     // Compute offset for this rank's data
     size_t offset = 0;
     MPI_Exscan(&local_num_particles, &offset, 1, MPI_UNSIGNED_LONG, MPI_SUM, MPI_COMM_WORLD);
 
     // Header handling
-    size_t header_size = 0;
+    unsigned long header_size = 0;
 
     if (rank == 0) {
         std::ofstream file(filename, std::ios::binary);
         if (!file) {
-            std::cerr << "Error: Could not open file " << filename << "\n";
-            MPI_Abort(MPI_COMM_WORLD, 1);
+            amrex::Abort("Error: Could not open file " + filename + "\n");
         }
         file.seekp(0, std::ios::end);
         header_size = file.tellp();
@@ -115,7 +114,7 @@ void writeBinarySimple(const std::string& filename, const std::vector<LightConeP
     }
 
     // Broadcast the header size to all ranks
-    MPI_Bcast(&header_size, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+	amrex::ParallelDescriptor::Bcast(&header_size, 1, 0);
 
     // Use MPI collective I/O for binary data
     MPI_File mpi_file;
